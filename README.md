@@ -30,12 +30,14 @@ PlantFinder permite a los usuarios ingresar coordenadas geográficas (latitud y 
  
   Copiar
   cd plantfinder
+
 3. Crea un entorno virtual e instala las dependencias:
 
  python -m venv venv
  source venv/bin/activate  # En Linux/Mac
  venv\Scripts\activate  # En Windows
  pip install -r requirements.txt
+
 4. Ejecuta la aplicación:
  python app.py
 
