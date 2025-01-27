@@ -26,3 +26,17 @@ PlantFinder permite a los usuarios ingresar coordenadas geográficas (latitud y 
 1. Clona este repositorio:
    ```bash
    git clone https://github.com/amt2283/PlantFinder.git
+2. Navega al directorio del proyecto:
+ ```bash
+  Copiar
+  cd plantfinder
+4. Crea un entorno virtual e instala las dependencias:
+```bash
+ python -m venv venv
+ source venv/bin/activate  # En Linux/Mac
+ venv\Scripts\activate  # En Windows
+ pip install -r requirements.txt
+5. Ejecuta la aplicación:
+```bash
+ python app.py
+
