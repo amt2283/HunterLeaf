@@ -55,7 +55,7 @@ def buscar():
         return redirect(url_for('home'))
     
 def cargar_grupos():
-    with open('C:/Users/AMT22/phyton/paginaweb/grupos_plantas.json', 'r', encoding='utf-8') as f:
+    with open('grupos_plantas.json', 'r', encoding='utf-8') as f:
 
         return json.load(f)
 
