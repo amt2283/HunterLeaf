@@ -35,9 +35,12 @@ PlantFinder permite a los usuarios ingresar coordenadas geográficas (latitud y 
 
  python -m venv venv
  source venv/bin/activate  # En Linux/Mac
+ 
  venv\Scripts\activate  # En Windows
+ 
  pip install -r requirements.txt
 
 4. Ejecuta la aplicación:
- python app.py
+
+python app.py
 
