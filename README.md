@@ -25,4 +25,4 @@ PlantFinder permite a los usuarios ingresar coordenadas geográficas (latitud y 
 
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/plantfinder.git
+   git clone https://github.com/amt2283/PlantFinder.git
