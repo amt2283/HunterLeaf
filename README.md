@@ -33,3 +33,32 @@ PlantFinder permite a los usuarios ingresar coordenadas geográficas (latitud y 
    - En Windows: `python -m venv venv && venv\Scripts\activate`
    - Luego instala las dependencias: `pip install -r requirements.txt`
 4. Ejecuta la aplicación: `python app.py`
+
+## Description
+
+PlantFinder enables users to input geographic coordinates (latitude and longitude) and select one or more plant genera to search for in the surrounding area. The application connects to the iNaturalist API to retrieve data about plants in the selected location, displaying a list with the information and location of the found plants.
+
+### Features
+
+- **Location-based search**: Enter latitude and longitude to find nearby plants.
+- **Genus selection**: Choose from plant genera such as Alga, Fungus, Lichen, Bryophyte, and Pteridophyte.
+- **Interactive map**: Visualize the location of plants on a map.
+- **Detailed information**: Get detailed information about the found plants, including their distance from your location.
+
+## Technologies Used
+
+- **Python** (Flask)
+- **HTML/CSS** (for the web interface)
+- **JavaScript** (for map visualization)
+- **iNaturalist API** (to fetch plant information)
+- **Jinja2** (for Flask template rendering)
+
+## Installation
+
+1. Clone this repository: `git clone https://github.com/amt2283/PlantFinder.git`
+2. Navigate to the project directory: `cd plantfinder`
+3. Create a virtual environment and install dependencies:
+   - On Linux/Mac: `python -m venv venv && source venv/bin/activate`
+   - On Windows: `python -m venv venv && venv\Scripts\activate`
+   - Then install dependencies: `pip install -r requirements.txt`
+4. Run the application: `python app.py`
