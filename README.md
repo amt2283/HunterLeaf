@@ -1,6 +1,7 @@
-# PlantFinder
-
-![Logo de PlantFinder](Logo%20PlantFinder.png)
+<h1 align="center">
+  <img src="Logo%20PlantFinder.png" alt="Logo de PlantFinder" width="50" height="50" style="vertical-align: middle;">
+  PlantFinder
+</h1>
 
 **PlantFinder** es una aplicación web creada con Flask que permite a los usuarios buscar plantas cercanas a una ubicación específica, basándose en géneros de plantas de interés. Utiliza la API de iNaturalist para obtener información sobre las plantas y muestra los resultados en un mapa interactivo.
 
@@ -32,4 +33,3 @@ PlantFinder permite a los usuarios ingresar coordenadas geográficas (latitud y 
    - En Windows: `python -m venv venv && venv\Scripts\activate`
    - Luego instala las dependencias: `pip install -r requirements.txt`
 4. Ejecuta la aplicación: `python app.py`
-
