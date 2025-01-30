@@ -18,6 +18,18 @@ class ProcesadorDatos:
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return R * c  # Distancia en kilómetros
 
+    def obtener_info_wikipedia(self, nombre_cientifico):
+        """Consulta la API de Wikipedia para obtener una descripción general de la planta."""
+        url = "https://es.wikipedia.org/api/rest_v1/page/summary/" + nombre_cientifico.replace(" ", "_")
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            return data.get("extract", "Información no disponible en Wikipedia.")
+        except requests.exceptions.RequestException as e:
+            print(f"Error al consultar Wikipedia: {e}")
+            return "Información no disponible."
+
     def procesar_inaturalist(self, latitud_usuario, longitud_usuario, radio_km=10):
         """Consulta la API de iNaturalist para obtener observaciones cercanas."""
         url = "https://api.inaturalist.org/v1/observations"
@@ -35,9 +47,6 @@ class ProcesadorDatos:
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
 
-            # Mostrar la respuesta de la API para depuración
-            print("Respuesta de la API:", response.json())
-
             resultados = response.json().get("results", [])
 
             for obs in resultados:
@@ -45,6 +54,7 @@ class ProcesadorDatos:
                 nombre_cientifico = taxon.get("name", "Desconocido")
                 ubicacion = obs.get("location", "").split(",")
                 descripcion = obs.get("description", "Sin descripción")
+                fecha_observacion = obs.get("observed_on", "Fecha desconocida")  # Obtener la fecha de observación
 
                 if len(ubicacion) == 2:
                     planta_latitud = float(ubicacion[0])
@@ -57,12 +67,17 @@ class ProcesadorDatos:
                 else:
                     distancia = "Desconocida"
 
+                # Obtener información adicional de Wikipedia
+                descripcion_wikipedia = self.obtener_info_wikipedia(nombre_cientifico)
+
                 plantas.append({
                     "nombre_cientifico": nombre_cientifico,
                     "latitud": planta_latitud if 'planta_latitud' in locals() else "Desconocida",
                     "longitud": planta_longitud if 'planta_longitud' in locals() else "Desconocida",
                     "descripcion": descripcion,
-                    "distancia": distancia
+                    "descripcion_wikipedia": descripcion_wikipedia,  # Descripción de Wikipedia
+                    "distancia": distancia,
+                    "fecha_observacion": fecha_observacion  # Agregar la fecha de observación
                 })
 
         except requests.exceptions.RequestException as e:
