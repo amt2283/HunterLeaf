@@ -38,11 +38,6 @@ def obtener_descripcion_wikipedia(nombre_cientifico):
         print(f"Error al obtener descripción de Wikipedia: {e}")
         return "Descripción no disponible."
 
-# Función para extraer el género del nombre científico
-def extraer_genero(nombre_cientifico):
-    """Extrae el género del nombre científico."""
-    return nombre_cientifico.split()[0] if nombre_cientifico else "Desconocido"
-
 @app.route('/')
 def home():
     return render_template('index.html', generos=GENEROS_INTERES)
@@ -72,16 +67,14 @@ def buscar():
 
         # Consultar la API de iNaturalist
         procesador = ProcesadorDatos(generos_seleccionados)
-        df_api = procesador.procesar_inaturalist(latitud, longitud)
+        plantas = procesador.procesar_inaturalist(latitud, longitud)
 
-        if df_api.empty:
-            flash("No se encontraron plantas en la ubicación especificada.", "info")
+        if not plantas:
+            flash("No se encontraron plantas válidas en la ubicación especificada.", "info")
             return render_template('resultados.html', plantas=[], latitud=latitud, longitud=longitud, genero_seleccionado=generos_seleccionados[0])
 
-        # Convertir resultados a diccionario y agregar descripciones de Wikipedia
-        plantas = df_api.to_dict(orient='records')
+        # Agregar descripciones de Wikipedia
         for planta in plantas:
-            planta["genero"] = extraer_genero(planta["nombre_cientifico"])  # Extraer el género
             planta["descripcion_wikipedia"] = obtener_descripcion_wikipedia(planta["nombre_cientifico"])
             planta["latitud"] = round(planta["latitud"], 3)  # Redondear latitud
             planta["longitud"] = round(planta["longitud"], 3)  # Redondear longitud
