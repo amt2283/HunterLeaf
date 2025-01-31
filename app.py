@@ -3,6 +3,7 @@ from procesador_archivo import ProcesadorDatos
 from base_de_datos import BaseDeDatos
 from geopy.geocoders import Nominatim
 import json
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'una_clave_secreta'  # Necesario para usar mensajes flash
@@ -12,7 +13,7 @@ db = BaseDeDatos()
 db.initialize()
 
 def cargar_grupos():
-    with open('grupos_plantas.json', 'r', encoding='utf-8') as f:
+    with open('C:/Users/AMT22/phyton/paginaweb/grupos_plantas.json', 'r', encoding='utf-8') as f:
         return json.load(f)
 
 GENEROS_INTERES = cargar_grupos()
@@ -25,6 +26,23 @@ def obtener_coordenadas(direccion):
         return ubicacion.latitude, ubicacion.longitude
     return None, None
 
+# Función para obtener descripción de Wikipedia
+def obtener_descripcion_wikipedia(nombre_cientifico):
+    try:
+        url = f"https://es.wikipedia.org/api/rest_v1/page/summary/{nombre_cientifico.replace(' ', '_')}"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("extract", "Descripción no disponible.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error al obtener descripción de Wikipedia: {e}")
+        return "Descripción no disponible."
+
+# Función para extraer el género del nombre científico
+def extraer_genero(nombre_cientifico):
+    """Extrae el género del nombre científico."""
+    return nombre_cientifico.split()[0] if nombre_cientifico else "Desconocido"
+
 @app.route('/')
 def home():
     return render_template('index.html', generos=GENEROS_INTERES)
@@ -36,7 +54,7 @@ def buscar():
         latitud = request.form.get('latitud')
         longitud = request.form.get('longitud')
         generos_seleccionados = request.form.getlist('generos')
-
+        
         if not generos_seleccionados:
             flash("Por favor, seleccione al menos un género de interés.", "error")
             return redirect(url_for('home'))
@@ -58,11 +76,26 @@ def buscar():
 
         if df_api.empty:
             flash("No se encontraron plantas en la ubicación especificada.", "info")
-            return render_template('resultados.html', plantas=[], latitud=latitud, longitud=longitud)
+            return render_template('resultados.html', plantas=[], latitud=latitud, longitud=longitud, genero_seleccionado=generos_seleccionados[0])
 
-        # Convertir resultados a diccionario
+        # Convertir resultados a diccionario y agregar descripciones de Wikipedia
         plantas = df_api.to_dict(orient='records')
-        return render_template('resultados.html', plantas=plantas, latitud=latitud, longitud=longitud)
+        for planta in plantas:
+            planta["genero"] = extraer_genero(planta["nombre_cientifico"])  # Extraer el género
+            planta["descripcion_wikipedia"] = obtener_descripcion_wikipedia(planta["nombre_cientifico"])
+            planta["latitud"] = round(planta["latitud"], 3)  # Redondear latitud
+            planta["longitud"] = round(planta["longitud"], 3)  # Redondear longitud
+
+        # Eliminar duplicados
+        plantas_unicas = []
+        vistas = set()
+        for planta in plantas:
+            clave = (planta["nombre_cientifico"], planta["latitud"], planta["longitud"])
+            if clave not in vistas:
+                vistas.add(clave)
+                plantas_unicas.append(planta)
+
+        return render_template('resultados.html', plantas=plantas_unicas, latitud=round(latitud, 3), longitud=round(longitud, 3), genero_seleccionado=generos_seleccionados[0])
 
     except ValueError:
         flash("Por favor, ingrese valores numéricos válidos para latitud y longitud.", "error")
