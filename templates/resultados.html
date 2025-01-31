@@ -13,14 +13,16 @@
         <p class="text-center">
             Coordenadas ingresadas: <strong>Latitud {{ latitud }}</strong>, <strong>Longitud {{ longitud }}</strong>
         </p>
-        
-
+        <p class="text-center">
+            Género seleccionado: <strong>{{ genero_seleccionado }}</strong>
+        </p>
         <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
         <div class="table-responsive">
             <table class="table table-bordered table-striped">
                 <thead class="table-success">
                     <tr>
                         <th>Nombre Científico</th>
+                        <th>Género</th>
                         <th>Latitud</th>
                         <th>Longitud</th>
                         <th>Descripción</th>
@@ -32,11 +34,12 @@
                     {% for planta in plantas %}
                         <tr>
                             <td>{{ planta.nombre_cientifico }}</td>
-                            <td>{{ planta.latitud }}</td>
-                            <td>{{ planta.longitud }}</td>
-                            <td id="desc-{{ loop.index }}">Cargando...</td>
+                            <td>{{ planta.genero }}</td>
+                            <td>{{ "%.3f"|format(planta.latitud) }}</td>
+                            <td>{{ "%.3f"|format(planta.longitud) }}</td>
+                            <td>{{ planta.descripcion_wikipedia }}</td>
                             <td>{{ "%.3f"|format(planta.distancia) }}</td>
-                            <td>{{ planta.fecha_observacion }}</td>
+                            <td>{{ planta.fecha_observacion if planta.fecha_observacion else "Fecha desconocida" }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -56,32 +59,17 @@
         }).addTo(map);
 
         const plantasData = {{ plantas|tojson|safe }};
-        function obtenerDescripcionWikipedia(nombreCientifico, index) {
-            const url = `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(nombreCientifico)}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const descripcion = data.extract || 'Descripción no encontrada';
-                    document.getElementById(`desc-${index}`).innerText = descripcion;
-                })
-                .catch(error => {
-                    console.error(`Error obteniendo datos de Wikipedia para ${nombreCientifico}:`, error);
-                    document.getElementById(`desc-${index}`).innerText = 'No disponible';
-                });
-        }
-        plantasData.forEach((planta, index) => {
-            obtenerDescripcionWikipedia(planta.nombre_cientifico, index + 1);
+
+        plantasData.forEach((planta) => {
             L.marker([planta.latitud, planta.longitud])
                 .addTo(map)
-                .bindPopup(`<strong>${planta.nombre_cientifico}</strong><br><span id='popup-desc-${index}'>Cargando...</span><br>Fecha: ${planta.fecha_observacion}<br><img src="${planta.imagen_url}" alt="Imagen de ${planta.nombre_cientifico}" style="max-width: 100px;">`);
-            fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(planta.nombre_cientifico)}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById(`popup-desc-${index}`).innerText = data.extract || 'Descripción no encontrada';
-                })
-                .catch(error => {
-                    document.getElementById(`popup-desc-${index}`).innerText = 'No disponible';
-                });
+                .bindPopup(`
+                    <strong>${planta.nombre_cientifico}</strong><br>
+                    <strong>Género:</strong> ${planta.genero}<br>
+                    ${planta.descripcion_wikipedia}<br>
+                    Fecha: ${planta.fecha_observacion || "Fecha desconocida"}<br>
+                    <img src="${planta.imagen_url}" alt="Imagen de ${planta.nombre_cientifico}" style="max-width: 100px;">
+                `);
         });
     </script>
 </body>
