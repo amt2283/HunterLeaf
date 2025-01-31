@@ -43,7 +43,6 @@ class ProcesadorDatos:
         plantas = []
 
         try:
-            # Realizar la solicitud a la API
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
 
@@ -52,9 +51,10 @@ class ProcesadorDatos:
             for obs in resultados:
                 taxon = obs.get("taxon", {})
                 nombre_cientifico = taxon.get("name", "Desconocido")
+                genero = taxon.get("genus", "Género desconocido")  # EXTRAER GÉNERO
                 ubicacion = obs.get("location", "").split(",")
                 descripcion = obs.get("description", "Sin descripción")
-                fecha_observacion = obs.get("observed_on", "Fecha desconocida")  # Obtener la fecha de observación
+                fecha_observacion = obs.get("observed_on", "Fecha desconocida")
 
                 if len(ubicacion) == 2:
                     planta_latitud = float(ubicacion[0])
@@ -67,17 +67,17 @@ class ProcesadorDatos:
                 else:
                     distancia = "Desconocida"
 
-                # Obtener información adicional de Wikipedia
                 descripcion_wikipedia = self.obtener_info_wikipedia(nombre_cientifico)
 
                 plantas.append({
                     "nombre_cientifico": nombre_cientifico,
+                    "genero": genero,  # INCLUIMOS EL GÉNERO CORRECTO
                     "latitud": planta_latitud if 'planta_latitud' in locals() else "Desconocida",
                     "longitud": planta_longitud if 'planta_longitud' in locals() else "Desconocida",
                     "descripcion": descripcion,
-                    "descripcion_wikipedia": descripcion_wikipedia,  # Descripción de Wikipedia
+                    "descripcion_wikipedia": descripcion_wikipedia,
                     "distancia": distancia,
-                    "fecha_observacion": fecha_observacion  # Agregar la fecha de observación
+                    "fecha_observacion": fecha_observacion
                 })
 
         except requests.exceptions.RequestException as e:
