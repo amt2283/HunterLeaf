@@ -1,166 +1,239 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plant Finder</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        .container {
-            margin: 50px auto;
-            max-width: 600px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-        .btn-primary {
-            background-color: #4CAF50;
-            border: none;
-        }
-        .btn-primary:hover {
-            background-color: #45a049;
-        }
-        .logo-title {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .logo {
-            height: 40px;
-        }
-        .footer {
-            text-align: center;
-            padding: 10px 0;
-            background-color: rgba(255, 255, 255, 0.9); /* Opcional: para que el texto sea legible */
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plant Finder</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Select2 CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+  <!-- jQuery UI CSS para el autocomplete -->
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Arial', sans-serif;
+      position: relative;
+      /* Se quita la imagen de fondo para que se use el div .bg-image */
+    }
+    /* Fondo con blur */
+    .bg-image {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(8px);
+      z-index: -1;
+    }
+    .container {
+      margin: 50px auto;
+      max-width: 600px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      border: none;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .logo-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .logo {
+      height: 40px;
+    }
+    .footer {
+      text-align: center;
+      padding: 10px 0;
+      background-color: rgba(255, 255, 255, 0.9); /* Opcional: para que el texto sea legible */
+    }
+    /* Estilo para el select con chevron */
+    select#tipoEntrada {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="%23444" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card p-4">
-            <div class="text-center logo-title">
-                <img src="https://raw.githubusercontent.com/amt2283/PlantFinder/517b891c2657a18102ea239dcc46a6cf192475cd/Logo%20PlantFinder.png" alt="Plant Finder Logo" class="logo">
+  <!-- Fondo con blur -->
+  <div class="bg-image"></div>
 
-                <h1>Plant Finder</h1>
-            </div>
-            <p class="text-muted text-center">Encuentra observaciones de plantas basadas en tu ubicación o dirección.</p>
-            
-            <form action="/buscar" method="post" onsubmit="return validarFormulario()">
-                <div class="mb-3">
-                    <label class="form-label">Buscar por:</label>
-                    <select id="tipoEntrada" class="form-control" onchange="cambiarEntrada()">
-                        <option value="direccion">Dirección</option>
-                        <option value="coordenadas">Coordenadas</option>
-                    </select>
-                </div>
-                
-                <div id="direccionDiv" class="mb-3">
-                    <input type="text" id="direccion" name="direccion" class="form-control" placeholder="Escribe una dirección">
-                </div>
-                
-                <div id="coordenadasDiv" class="row" style="display: none;">
-                    <div class="col-md-6 mb-3">
-                        <input type="text" id="latitud" name="latitud" class="form-control" placeholder="Latitud">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <input type="text" id="longitud" name="longitud" class="form-control" placeholder="Longitud">
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="radio" class="form-label">Radio (en km):</label>
-                    <input type="number" id="radio" name="radio" class="form-control" placeholder="Ej. 10" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="generos" class="form-label">Géneros de interés:</label>
-                    <select id="generos" name="generos" class="form-control" multiple>
-                        {% for genero in generos %}
-                            <option value="{{ genero }}">{{ genero }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="text-center">
-                    <button type="submit" class="btn btn-primary">Buscar</button>
-                </div>
-            </form>
+  <div class="container">
+    <div class="card p-4">
+      <div class="text-center logo-title">
+        <img src="https://raw.githubusercontent.com/amt2283/PlantFinder/517b891c2657a18102ea239dcc46a6cf192475cd/Logo%20PlantFinder.png" alt="Plant Finder Logo" class="logo">
+        <h1>Plant Finder</h1>
+      </div>
+      <p class="text-muted text-center">Encuentra observaciones de plantas basadas en tu ubicación o dirección.</p>
+      
+      <form action="/buscar" method="post" onsubmit="return validarFormulario()">
+        <div class="mb-3">
+          <label class="form-label">Buscar por:</label>
+          <select id="tipoEntrada" class="form-control" onchange="cambiarEntrada()">
+            <option value="direccion">Dirección</option>
+            <option value="coordenadas">Coordenadas</option>
+          </select>
         </div>
+        
+        <div id="direccionDiv" class="mb-3">
+          <input type="text" id="direccion" name="direccion" class="form-control" placeholder="Escribe una dirección">
+        </div>
+        
+        <div id="coordenadasDiv" class="row" style="display: none;">
+          <div class="col-md-6 mb-3">
+            <input type="text" id="latitud" name="latitud" class="form-control" placeholder="Latitud">
+          </div>
+          <div class="col-md-6 mb-3">
+            <input type="text" id="longitud" name="longitud" class="form-control" placeholder="Longitud">
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="radio" class="form-label">Radio (en km):</label>
+          <input type="number" id="radio" name="radio" class="form-control" placeholder="Ej. 10" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="generos" class="form-label">Géneros de interés:</label>
+          <select id="generos" name="generos" class="form-control" multiple>
+            {% for genero in generos %}
+              <option value="{{ genero }}">{{ genero }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="text-center">
+          <button type="submit" class="btn btn-primary">Buscar</button>
+        </div>
+        <!-- Spinner de carga -->
+        <div id="spinner" class="text-center mt-3" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+        </div>
+      </form>
     </div>
-    <footer class="footer">
-        <div class="container">
-            <p>Sígueme en: 
-                <a href="https://github.com/amt2283" target="_blank">GitHub</a> |
-                <a href="https://www.linkedin.com/in/adolfo-morales-tena-02395733b/" target="_blank">LinkedIn</a>
-            </p>
-            <p>&copy; 2023 Plant Finder. Creado por <strong>Adolfo MT</strong></p>
-        </div>
-    </footer>
+  </div>
+  <footer class="footer">
+    <div class="container">
+      <p>Sígueme en: 
+        <a href="https://github.com/amt2283" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/adolfo-morales-tena-02395733b/" target="_blank">LinkedIn</a>
+      </p>
+      <p>&copy; 2023 Plant Finder. Creado por <strong>Adolfo MT</strong></p>
+    </div>
+  </footer>
+  
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <!-- jQuery UI JS para el autocomplete -->
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+  <!-- Select2 JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      $('#generos').select2({ placeholder: "Selecciona los géneros", allowClear: true });
+      fetchRandomPlantImage();
+      
+      // Inicializa el autocomplete para la dirección
+      $("#direccion").autocomplete({
+        source: function(request, response) {
+          $.ajax({
+            url: "https://nominatim.openstreetmap.org/search",
+            dataType: "json",
+            data: {
+              format: "json",
+              addressdetails: 1,
+              q: request.term,
+              limit: 5
+            },
+            success: function(data) {
+              response($.map(data, function(item) {
+                return {
+                  label: item.display_name,
+                  value: item.display_name,
+                  lat: item.lat,
+                  lon: item.lon
+                };
+              }));
+            }
+          });
+        },
+        select: function(event, ui) {
+          console.log("Dirección seleccionada: " + ui.item.label);
+          // Opcional: puedes guardar las coordenadas en campos ocultos para usarlas posteriormente
+        },
+        minLength: 3
+      });
+    });
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('#generos').select2({ placeholder: "Selecciona los géneros", allowClear: true });
-            fetchRandomPlantImage();
-        });
-        
-        function cambiarEntrada() {
-            let tipo = document.getElementById("tipoEntrada").value;
-            document.getElementById("direccionDiv").style.display = tipo === "direccion" ? "block" : "none";
-            document.getElementById("coordenadasDiv").style.display = tipo === "coordenadas" ? "flex" : "none";
+    function cambiarEntrada() {
+      let tipo = document.getElementById("tipoEntrada").value;
+      document.getElementById("direccionDiv").style.display = tipo === "direccion" ? "block" : "none";
+      document.getElementById("coordenadasDiv").style.display = tipo === "coordenadas" ? "flex" : "none";
+    }
+    
+    function validarFormulario() {
+      let tipo = document.getElementById("tipoEntrada").value;
+      let direccion = document.getElementById("direccion").value.trim();
+      let latitud = document.getElementById("latitud").value.trim();
+      let longitud = document.getElementById("longitud").value.trim();
+      
+      if (tipo === "direccion" && direccion === "") {
+        alert("Por favor, ingresa una dirección.");
+        return false;
+      }
+      if (tipo === "coordenadas" && (latitud === "" || longitud === "")) {
+        alert("Por favor, ingresa ambas coordenadas.");
+        return false;
+      }
+      
+      // Muestra el spinner de carga y deshabilita el botón de enviar
+      document.querySelector('button[type="submit"]').disabled = true;
+      document.getElementById("spinner").style.display = "block";
+      
+      return true;
+    }
+    
+    function fetchRandomPlantImage() {
+      const timestamp = new Date().getTime();
+      const apiUrl = `https://api.inaturalist.org/v1/observations?taxon_id=47126&per_page=1&order_by=random&timestamp=${timestamp}`;
+      
+      $.getJSON(apiUrl, function(data) {
+        if (data.results.length > 0 && data.results[0].photos.length > 0) {
+          let imageUrl = data.results[0].photos[0].url.replace("square", "large");
+          // Se asigna la imagen al fondo del div .bg-image
+          $(".bg-image").css("background-image", `url(${imageUrl})`);
+        } else {
+          console.error("No se encontraron imágenes en la respuesta de la API.");
         }
-        
-        function validarFormulario() {
-            let tipo = document.getElementById("tipoEntrada").value;
-            let direccion = document.getElementById("direccion").value.trim();
-            let latitud = document.getElementById("latitud").value.trim();
-            let longitud = document.getElementById("longitud").value.trim();
-
-            if (tipo === "direccion" && direccion === "") {
-                alert("Por favor, ingresa una dirección.");
-                return false;
-            }
-            if (tipo === "coordenadas" && (latitud === "" || longitud === "")) {
-                alert("Por favor, ingresa ambas coordenadas.");
-                return false;
-            }
-            return true;
-        }
-
-        function fetchRandomPlantImage() {
-            const timestamp = new Date().getTime();
-            const apiUrl = `https://api.inaturalist.org/v1/observations?taxon_id=47126&per_page=1&order_by=random&timestamp=${timestamp}`;
-
-            $.getJSON(apiUrl, function(data) {
-                if (data.results.length > 0 && data.results[0].photos.length > 0) {
-                    let imageUrl = data.results[0].photos[0].url.replace("square", "large");
-                    $("body").css("background-image", `url(${imageUrl})`);
-                } else {
-                    console.error("No se encontraron imágenes en la respuesta de la API.");
-                }
-            }).fail(function() {
-                console.error("Error al cargar la imagen de la planta.");
-            });
-        }
-    </script>
+      }).fail(function() {
+        console.error("Error al cargar la imagen de la planta.");
+      });
+    }
+  </script>
 </body>
 </html>
+
