@@ -1,6 +1,6 @@
 <div align="center">
   <img src="Logo%20PlantFinder.png" alt="PlantFinder Logo" width="120">
-  <h1>🌿 PlantFinder</h1>
+  <h1>🌿 HunterLeaf</h1>
   <p>¡Descubre la naturaleza que te rodea! Encuentra plantas cerca de ti con tecnología colaborativa 🌍</p>
   
   [![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)](https://python.org)
