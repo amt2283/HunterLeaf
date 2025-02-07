@@ -52,7 +52,7 @@
 
 ## Installation
 
-1. Clone this repository: `git clone https://github.com/amt2283/PlantFinder.git`
+1. Clone this repository: `git clone https://github.com/amt2283/HunterLeaf.git`
 2. Navigate to the project directory: `cd plantfinder`
 3. Create a virtual environment and install dependencies:
    - On Linux/Mac: `python -m venv venv && source venv/bin/activate`
