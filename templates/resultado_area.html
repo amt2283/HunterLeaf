@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados de Búsqueda en el Área</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <h1 class="text-center mb-4 text-success">Resultados de Búsqueda en el Área</h1>
+    
+    <!-- Información del área -->
+    <p class="text-center">
+      Área seleccionada:
+      <strong>SW: ({{ swlat }}, {{ swlng }})</strong> -
+      <strong>NE: ({{ nelat }}, {{ nelng }})</strong>
+    </p>
+    
+    <!-- Formulario para ordenar y filtrar -->
+    <form class="row g-3 mb-4" method="GET" action="{{ url_for('buscar_area') }}">
+      <!-- Campos ocultos con las coordenadas -->
+      <input type="hidden" name="swlat" value="{{ swlat }}">
+      <input type="hidden" name="swlng" value="{{ swlng }}">
+      <input type="hidden" name="nelat" value="{{ nelat }}">
+      <input type="hidden" name="nelng" value="{{ nelng }}">
+      
+      <!-- Dropdown para ordenar por fecha -->
+      <div class="col-auto">
+        <label for="order_date" class="col-form-label">Ordenar por fecha:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select" id="order_date" name="order_date">
+          <option value="desc" {% if order_date=='desc' %}selected{% endif %}>Más recientes a menos recientes</option>
+          <option value="asc" {% if order_date=='asc' %}selected{% endif %}>Menos recientes a más recientes</option>
+        </select>
+      </div>
+      
+      <!-- Dropdown para filtrar por fuente -->
+      <div class="col-auto">
+        <label for="source_filter" class="col-form-label">Fuente:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select" id="source_filter" name="source_filter">
+          <option value="mixta" {% if source_filter=='mixta' %}selected{% endif %}>Mixta</option>
+          <option value="iNaturalist" {% if source_filter=='iNaturalist' %}selected{% endif %}>iNaturalist</option>
+          <option value="GBIF" {% if source_filter=='GBIF' %}selected{% endif %}>GBIF</option>
+        </select>
+      </div>
+      
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-3">Aplicar filtros</button>
+      </div>
+    </form>
+    
+    <!-- Mapa -->
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+    
+    <!-- Tabla de resultados -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead class="table-success">
+          <tr>
+            <th>Imagen</th>
+            <th>Nombre Científico</th>
+            <th>Género</th>
+            <th>Latitud</th>
+            <th>Longitud</th>
+            <th>Descripción</th>
+            <th>Fecha de Observación</th>
+            <th>Fuente</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for planta in plantas %}
+            <tr>
+              <td>
+                <img src="{{ planta.imagen_generica }}" alt="Imagen de {{ planta.genero }}" style="max-width: 100px;">
+              </td>
+              <td>{{ planta.nombre_cientifico }}</td>
+              <td>{{ planta.genero }}</td>
+              <td>{{ planta.latitud }}</td>
+              <td>{{ planta.longitud }}</td>
+              <td>{{ planta.descripcion }}</td>
+              <td>{{ planta.fecha_observacion if planta.fecha_observacion else "Fecha desconocida" }}</td>
+              <td>{{ planta.fuente }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Paginación -->
+    {% if total_pages > 1 %}
+    <nav aria-label="Paginación de resultados">
+      <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('buscar_area', swlat=swlat, swlng=swlng, nelat=nelat, nelng=nelng, order_date=order_date, source_filter=source_filter, page=page-1) }}">Anterior</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">Anterior</span>
+          </li>
+        {% endif %}
+        
+        {% for p in range(1, total_pages+1) %}
+          {% if p == page %}
+            <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+          {% else %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('buscar_area', swlat=swlat, swlng=swlng, nelat=nelat, nelng=nelng, order_date=order_date, source_filter=source_filter, page=p) }}">{{ p }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        
+        {% if page < total_pages %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('buscar_area', swlat=swlat, swlng=swlng, nelat=nelat, nelng=nelng, order_date=order_date, source_filter=source_filter, page=page+1) }}">Siguiente</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">Siguiente</span>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+    
+    <!-- Botón para regresar a la selección de área -->
+    <div class="text-center mt-4">
+      <a href="{{ url_for('seleccionar_area') }}" class="btn btn-primary">Volver a seleccionar área</a>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script>
+    // Inicializar el mapa centrado en el área
+    const map = L.map('map').setView([{{ center_lat }}, {{ center_lng }}], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Dibujar el rectángulo del área seleccionada
+    const bounds = [
+      [{{ swlat }}, {{ swlng }}],
+      [{{ nelat }}, {{ nelng }}]
+    ];
+    L.rectangle(bounds, {color: 'blue', weight: 2}).addTo(map);
+    
+    // Agregar marcadores para cada planta
+    const plantasData = {{ plantas|tojson|safe }};
+    plantasData.forEach(planta => {
+      if (typeof planta.latitud === "number" && typeof planta.longitud === "number") {
+        L.marker([planta.latitud, planta.longitud]).addTo(map)
+          .bindPopup(`
+            <strong>${planta.nombre_cientifico}</strong><br>
+            <strong>Género:</strong> ${planta.genero}<br>
+            ${planta.descripcion}<br>
+            Fecha: ${planta.fecha_observacion || "Fecha desconocida"}<br>
+            Fuente: ${planta.fuente}<br>
+            <img src="${planta.imagen_generica}" alt="Imagen de ${planta.genero}" style="max-width: 100px;">
+          `);
+      }
+    });
+  </script>
+</body>
+</html>
