@@ -29,7 +29,7 @@ def cargar_grupos():
 
 GENEROS_INTERES = cargar_grupos()
 
-# Instancia del agregador para búsqueda por área
+# Instancia del agregador para búsqueda por área (bounding box)
 aggregator = AreaDataAggregator(generos_interes=GENEROS_INTERES)
 
 # Función para obtener coordenadas desde una dirección
@@ -40,23 +40,50 @@ def obtener_coordenadas(direccion):
         return ubicacion.latitude, ubicacion.longitude
     return None, None
 
-# Función para obtener descripción de Wikipedia
+# Función para obtener descripción de Wikipedia con manejo de errores.
 def obtener_descripcion_wikipedia(nombre_cientifico):
+    """Consulta la API de Wikipedia para obtener una descripción general del taxón.
+    Si no se encuentra la información, retorna una cadena vacía."""
+    base_url = "https://es.wikipedia.org/api/rest_v1/page/summary/"
+    url = base_url + nombre_cientifico.replace(" ", "_")
     try:
-        url = f"https://es.wikipedia.org/api/rest_v1/page/summary/{nombre_cientifico.replace(' ', '_')}"
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("extract", "Descripción no disponible.")
+        if response.status_code == 404:
+            print(f"Página no encontrada para '{nombre_cientifico}'. Se intentará una búsqueda...")
+            search_url = "https://es.wikipedia.org/w/api.php"
+            params = {
+                "action": "query",
+                "list": "search",
+                "srsearch": nombre_cientifico,
+                "format": "json"
+            }
+            search_response = requests.get(search_url, params=params, timeout=10)
+            search_response.raise_for_status()
+            search_data = search_response.json()
+            search_results = search_data.get("query", {}).get("search", [])
+            if search_results:
+                title = search_results[0]["title"]
+                url = base_url + title.replace(" ", "_")
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                return data.get("extract", "")
+            else:
+                print(f"No se encontraron resultados de búsqueda para '{nombre_cientifico}'.")
+                return ""
+        else:
+            response.raise_for_status()
+            data = response.json()
+            return data.get("extract", "")
     except requests.exceptions.RequestException as e:
         print(f"Error al obtener descripción de Wikipedia: {e}")
-        return "Descripción no disponible."
+        return ""
 
 @app.route('/')
 def home():
     return render_template('index.html', generos=GENEROS_INTERES)
 
-# Búsqueda por dirección (POST)
+# Ruta para búsqueda (POST)
 @app.route('/buscar', methods=['POST'])
 def buscar_direccion():
     try:
@@ -69,6 +96,7 @@ def buscar_direccion():
             flash("Por favor, seleccione al menos un género de interés.", "error")
             return redirect(url_for('home'))
 
+        # Si se ingresa dirección, se obtienen coordenadas; de lo contrario se usan las ingresadas
         if direccion:
             latitud, longitud = obtener_coordenadas(direccion)
             if latitud is None or longitud is None:
@@ -80,19 +108,29 @@ def buscar_direccion():
 
         latitud, longitud = float(latitud), float(longitud)
 
-        # Consultar la API de iNaturalist (este código sigue funcionando como antes)
-        procesador = ProcesadorDatos(generos_seleccionados)
-        plantas = procesador.procesar_inaturalist(latitud, longitud)
+        # Consultar la API de iNaturalist
+        procesador = ProcesadorDatos(generos_interes=generos_seleccionados)
+        df_plantas = procesador.procesar_inaturalist(latitud, longitud)
+        plantas = df_plantas.to_dict(orient="records")
 
         if not plantas:
             flash("No se encontraron plantas válidas en la ubicación especificada.", "info")
             return render_template('resultados.html', plantas=[], latitud=latitud, longitud=longitud, genero_seleccionado=generos_seleccionados[0])
 
-        # Agregar descripciones de Wikipedia y redondear coordenadas
+        # Procesar cada observación: agregar descripción de Wikipedia y otros ajustes
         for planta in plantas:
             planta["descripcion_wikipedia"] = obtener_descripcion_wikipedia(planta["nombre_cientifico"])
-            planta["latitud"] = round(planta["latitud"], 3)
-            planta["longitud"] = round(planta["longitud"], 3)
+            # Si no existe imagen, asignamos un placeholder
+            if "imagen_generica" not in planta or not planta["imagen_generica"]:
+                planta["imagen_generica"] = "https://via.placeholder.com/100?text=No+Image"
+            try:
+                planta["latitud"] = round(float(planta["latitud"]), 3)
+            except:
+                planta["latitud"] = planta["latitud"]
+            try:
+                planta["longitud"] = round(float(planta["longitud"]), 3)
+            except:
+                planta["longitud"] = planta["longitud"]
 
         # Eliminar duplicados
         plantas_unicas = []
@@ -124,15 +162,14 @@ def buscar_area():
         sw_lng = float(request.args.get('swlng'))
         ne_lat = float(request.args.get('nelat'))
         ne_lng = float(request.args.get('nelng'))
+        fuente = request.args.get('fuente', 'inaturalist')
     except (TypeError, ValueError):
         flash("Error en las coordenadas proporcionadas.", "error")
         return redirect(url_for('seleccionar_area'))
     
-    # Calcular el centro del área para centrar el mapa
     center_lat = (sw_lat + ne_lat) / 2
     center_lng = (sw_lng + ne_lng) / 2
 
-    # Parámetros opcionales para orden y filtrado:
     order_date = request.args.get('order_date', 'desc')
     source_filter = request.args.get('source_filter', 'mixta')
     try:
@@ -140,24 +177,16 @@ def buscar_area():
     except ValueError:
         page = 1
 
-    # Obtener todos los resultados de ambas fuentes
-    plantas = aggregator.obtener_datos_area(sw_lat, sw_lng, ne_lat, ne_lng)
+    plantas = aggregator.obtener_datos_area(sw_lat, sw_lng, ne_lat, ne_lng, fuente)
     
-    # Mostrar en consola el total de observaciones obtenidas
     print(f"Total de observaciones sin filtrar: {len(plantas)}")
-
-    # (Opcional) Imprime en consola los géneros obtenidos y los géneros de interés para depurar
     print("Generos obtenidos en las observaciones:")
     for planta in plantas:
         print(planta.get("genero"))
     print("Generos de interés:")
     print(GENEROS_INTERES)
-
-    # Filtrar para que solo se incluyan plantas (comparando en minúsculas)
-    
     print(f"Observaciones después del filtrado: {len(plantas)}")
 
-    # Asignar la fuente si no está presente
     for planta in plantas:
         if "fuente" not in planta:
             if planta.get("descripcion", "Sin descripción") == "Sin descripción":
@@ -165,11 +194,9 @@ def buscar_area():
             else:
                 planta["fuente"] = "GBIF"
     
-    # Filtrar por fuente si se selecciona una en particular
     if source_filter != 'mixta':
         plantas = [p for p in plantas if p.get("fuente") == source_filter]
 
-    # Ordenar por fecha de observación
     def get_fecha(p):
         fecha_str = p.get("fecha_observacion", "Fecha desconocida")
         try:
@@ -187,7 +214,6 @@ def buscar_area():
     reverse_order = True if order_date == 'desc' else False
     plantas.sort(key=sort_key, reverse=reverse_order)
 
-    # Paginación: mostrar 20 resultados por página
     PER_PAGE = 20
     total = len(plantas)
     total_pages = math.ceil(total / PER_PAGE)
