@@ -8,7 +8,7 @@ from area_data import AreaDataAggregator
 from datetime import datetime
 import math
 
-app = Flask(__name__, template_folder=r"C:\Users\AMT22\phyton\paginaweb\templates")
+app = Flask(__name__, template_folder="templates")
 app.secret_key = 'una_clave_secreta'  # Necesario para usar mensajes flash
 
 # Inicializar variables globales
