@@ -121,15 +121,25 @@
         
         <div class="mb-3">
           <label for="radio" class="form-label">Radio (en km):</label>
-          <input type="number" id="radio" name="radio" class="form-control" placeholder="Ej. 10" required>
+          <input type="number" id="radio" name="radio" class="form-control" placeholder="Ej. 25" required>
         </div>
         
+        <!-- Select de Grupo -->
         <div class="mb-3">
-          <label for="generos" class="form-label">Géneros de interés:</label>
-          <select id="generos" name="generos" class="form-control" multiple>
-            {% for genero in generos %}
-              <option value="{{ genero }}">{{ genero }}</option>
+          <label for="categoria" class="form-label">Grupo:</label>
+          <select id="categoria" name="categoria" class="form-control">
+            <option value="">Selecciona un grupo</option>
+            {% for grupo in grupos.plant_groups %}
+              <option value="{{ grupo.grupo }}">{{ grupo.grupo }}</option>
             {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Select de Género, que se poblará según el grupo seleccionado -->
+        <div class="mb-3">
+          <label for="genero" class="form-label">Género:</label>
+          <select id="genero" name="genero" class="form-control" disabled>
+            <option value="">Selecciona un género</option>
           </select>
         </div>
         
@@ -182,9 +192,20 @@
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
   <!-- Select2 JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  
+  <!-- Se inyecta la variable de grupos con la estructura de grupos_plantas.json -->
+  <script>
+    // La variable "gruposData" contendrá el objeto JSON completo,
+    // que en este caso tiene la propiedad "plant_groups"
+    var gruposData = {{ grupos|tojson|safe }};
+  </script>
+  
   <script>
     $(document).ready(function() {
-      $('#generos').select2({ placeholder: "Selecciona los géneros", allowClear: true });
+      // Inicialización de Select2 para ambos selects
+      $('#categoria').select2({ placeholder: "Selecciona un grupo", allowClear: true });
+      $('#genero').select2({ placeholder: "Selecciona un género", allowClear: true });
+      
       fetchRandomPlantImage();
       
       // Inicializa el autocomplete para la dirección
@@ -213,9 +234,41 @@
         },
         select: function(event, ui) {
           console.log("Dirección seleccionada: " + ui.item.label);
-          // Opcional: guardar coordenadas en campos ocultos
         },
         minLength: 3
+      });
+      
+      // Cuando se seleccione un grupo, se actualiza el select de géneros
+      $('#categoria').on('change', function() {
+        var selectedGrupo = $(this).val();
+        var generoSelect = $('#genero');
+        generoSelect.empty();
+        generoSelect.append('<option value="">Selecciona un género</option>');
+        if (selectedGrupo !== '') {
+          // Busca en gruposData.plant_groups el objeto cuyo campo "grupo" coincida
+          var grupo = gruposData.plant_groups.find(function(item) {
+            return item.grupo === selectedGrupo;
+          });
+          if (grupo) {
+            // Aplanamos la lista de géneros a partir de las familias
+            var generos = [];
+            grupo.familias.forEach(function(familia) {
+              if (familia.generos) {
+                generos = generos.concat(familia.generos);
+              }
+            });
+            generos.forEach(function(gen) {
+              generoSelect.append('<option value="' + gen + '">' + gen + '</option>');
+            });
+            generoSelect.prop('disabled', false);
+          } else {
+            generoSelect.prop('disabled', true);
+          }
+        } else {
+          generoSelect.prop('disabled', true);
+        }
+        // Actualiza Select2
+        generoSelect.trigger('change.select2');
       });
     });
     
@@ -270,11 +323,9 @@
     }
     
     function redirigirBounding() {
-    console.log("Opción Bounding Box seleccionada.");
-    window.location.href = "/seleccionar_area";
-  
-}
-
+      console.log("Opción Bounding Box seleccionada.");
+      window.location.href = "/seleccionar_area";
+    }
     
     function cerrarMenu() {
       var offcanvasElement = document.getElementById('offcanvasMenu');
@@ -286,4 +337,3 @@
   </script>
 </body>
 </html>
-
