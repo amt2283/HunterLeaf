@@ -1,83 +1,114 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados de Búsqueda</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados de Búsqueda</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <style>
+    .planta-card {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background-color: #fff;
+    }
+    .planta-card img {
+      max-width: 100px;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body class="bg-light">
-    <div class="container py-5">
-        <h1 class="text-center mb-4 text-success">Resultados de Búsqueda</h1>
-        <p class="text-center">
-            Coordenadas ingresadas: <strong>Latitud {{ latitud }}</strong>, <strong>Longitud {{ longitud }}</strong>
-        </p>
-        <p class="text-center">
-            Género seleccionado: <strong>{{ genero_seleccionado }}</strong>
-        </p>
-        <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped">
-                <thead class="table-success">
-                    <tr>
-                        <th>Imagen</th>
-                        <th>Nombre Científico</th>
-                        <th>Género</th>
-                        <th>Latitud</th>
-                        <th>Longitud</th>
-                        <th>Descripción</th>
-                        <th>Distancia (km)</th>
-                        <th>Fecha de Observación</th>
-                    </tr>
-                </thead>
-                <tbody id="plantas-table-body">
-                    {% for planta in plantas %}
-                        <tr>
-                            <!-- Columna de imagen: se asume que 'imagen_generica' contiene la URL de la imagen -->
-                            <td>
-                                <img src="{{ planta.imagen_generica }}" alt="Imagen de {{ planta.genero }}" style="max-width: 100px;">
-                            </td>
-                            <td>{{ planta.nombre_cientifico }}</td>
-                            <td>{{ planta.genero }}</td>
-                            <td>{{ "%.3f"|format(planta.latitud) }}</td>
-                            <td>{{ "%.3f"|format(planta.longitud) }}</td>
-                            <td>{{ planta.descripcion_wikipedia }}</td>
-                            <td>{{ "%.3f"|format(planta.distancia) }}</td>
-                            <td>{{ planta.fecha_observacion if planta.fecha_observacion else "Fecha desconocida" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="text-center mt-4">
-            <a href="/" class="btn btn-primary">Volver a la búsqueda</a>
-        </div>
+  <div class="container py-5">
+    <h1 class="text-center mb-4 text-success">Resultados de Búsqueda</h1>
+    <p class="text-center">
+      Coordenadas ingresadas: <strong>Latitud {{ latitud }}</strong>, <strong>Longitud {{ longitud }}</strong>
+    </p>
+    <p class="text-center">
+      Género seleccionado: <strong>{{ genero_seleccionado }}</strong>
+    </p>
+    <!-- Dropdown para ordenar observaciones por fecha -->
+    <div class="mb-4 text-center">
+      <label for="orden_fecha" class="form-label">Ordenar por fecha de observación:</label>
+      <select id="orden_fecha" class="form-select w-auto d-inline-block">
+        <option value="desc" selected>Más reciente a menos reciente</option>
+        <option value="asc">Menos reciente a más reciente</option>
+      </select>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-    <script>
-        // Inicialización del mapa
-        const map = L.map('map').setView([{{ latitud }}, {{ longitud }}], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+    <div class="row" id="plantas-container">
+      {% for planta in plantas %}
+        <div class="col-md-4 planta-container" data-fecha="{{ planta.fecha_observacion }}">
+          <div class="planta-card">
+            {% if planta.imagen_generica %}
+              <img src="{{ planta.imagen_generica }}" alt="{{ planta.nombre_cientifico }}">
+            {% endif %}
+            <h3>{{ planta.nombre_cientifico }}</h3>
+            {% if planta.nombre_comun != 'N/A' %}
+              <p>Nombre común: {{ planta.nombre_comun }}</p>
+            {% endif %}
+            <p>Distancia: {{ planta.distancia }}</p>
+            <p>Coordenadas: {{ planta.latitud }}, {{ planta.longitud }}</p>
+            <p>Fecha: {{ planta.fecha_observacion }}</p>
+            {% if planta.descripcion_wikipedia %}
+              <p>{{ planta.descripcion_wikipedia }}</p>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="text-center mt-4">
+      <a href="/" class="btn btn-primary">Volver a la búsqueda</a>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script>
+    // Inicialización del mapa
+    const map = L.map('map').setView([{{ latitud }}, {{ longitud }}], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-        const plantasData = {{ plantas|tojson|safe }};
+    const plantasData = {{ plantas|tojson|safe }};
 
-        // Se crea un marcador para cada planta, incluyendo la imagen genérica en el popup
-        plantasData.forEach((planta) => {
-            L.marker([planta.latitud, planta.longitud])
-                .addTo(map)
-                .bindPopup(`
-                    <strong>${planta.nombre_cientifico}</strong><br>
-                    <strong>Género:</strong> ${planta.genero}<br>
-                    ${planta.descripcion_wikipedia}<br>
-                    Fecha: ${planta.fecha_observacion || "Fecha desconocida"}<br>
-                    <img src="${planta.imagen_generica}" alt="Imagen de ${planta.genero}" style="max-width: 100px;">
-                `);
-        });
-    </script>
+    // Crear marcadores en el mapa
+    plantasData.forEach((planta) => {
+      L.marker([planta.latitud, planta.longitud])
+        .addTo(map)
+        .bindPopup(`
+          <strong>${planta.nombre_cientifico}</strong><br>
+          <strong>Género:</strong> ${planta.genero || ""}<br>
+          ${planta.descripcion_wikipedia || ""}<br>
+          Fecha: ${planta.fecha_observacion || "Fecha desconocida"}<br>
+          <img src="${planta.imagen_generica}" alt="Imagen de ${planta.nombre_cientifico}" style="max-width: 100px;">
+        `);
+    });
+
+    // Función para ordenar los contenedores de plantas por fecha
+    function sortPlantas(order) {
+      const container = document.getElementById('plantas-container');
+      // Convertir NodeList a array
+      const plantasArray = Array.from(container.getElementsByClassName('planta-container'));
+      plantasArray.sort((a, b) => {
+        const fechaA = new Date(a.getAttribute('data-fecha'));
+        const fechaB = new Date(b.getAttribute('data-fecha'));
+        return order === 'asc' ? fechaA - fechaB : fechaB - fechaA;
+      });
+      // Reinsertar los elementos en el contenedor según el orden
+      plantasArray.forEach(planta => container.appendChild(planta));
+    }
+
+    // Manejar el cambio en el dropdown de ordenamiento
+    document.getElementById('orden_fecha').addEventListener('change', function() {
+      sortPlantas(this.value);
+    });
+
+    // Ordenar inicialmente (más reciente a menos reciente)
+    sortPlantas(document.getElementById('orden_fecha').value);
+  </script>
 </body>
 </html>
