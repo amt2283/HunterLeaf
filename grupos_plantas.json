@@ -1,23 +1,36 @@
-[
-    "Alga",
-    "Hongo",
-    "Líquen",
-    "Briófito",
-    "Pteridófito",
-    "Angiosperma",
-    "Gimnosperma",
-    "Helecho",
-    "Musgo",
-    "Cactus",
-    "Orquídea",
-    "Palma",
-    "Suculenta",
-    "Hierbas",
-    "Conífera",
-    "Rosáceas",
-    "Fabáceas",
-    "Asteráceas",
-    "Liliáceas",
-    "Poáceas",
-    "Brassicáceas"
-]
+{
+    "plant_groups": [
+      {
+        "grupo": "Angiospermas",
+        "familias": [
+          {
+            "familia": "Rosaceae",
+            "generos": ["Rosa", "Fragaria", "Malus"]
+          },
+          {
+            "familia": "Asteraceae",
+            "generos": ["Taraxacum", "Lactuca", "Carthamus"]
+          }
+        ]
+      },
+      {
+        "grupo": "Gimnospermas",
+        "familias": [
+          {
+            "familia": "Pinaceae",
+            "generos": ["Pinus", "Abies", "Sequoia"]
+          }
+        ]
+      },
+      {
+        "grupo": "Pteridófitos",
+        "familias": [
+          {
+            "familia": "Helechos",
+            "generos": ["Polypodium", "Dryopteris", "Equisetum"]
+          }
+        ]
+      }
+    ]
+  }
+  
