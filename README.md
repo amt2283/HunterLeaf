@@ -10,7 +10,7 @@
 
 ---
 
-**🌐 Live Demo:** [Próximamente] | **📌 Versión Actual:** 1.1.0 | **📜 Licencia:** [Apache 2.0](LICENSE)
+**🌐 Live Demo: https://75c9-89-26-182-41.ngrok-free.app | **📌 Versión Actual:** 1.1.0 | **📜 Licencia:** [Apache 2.0](LICENSE)
 
 ---
 
