@@ -8,29 +8,48 @@ from area_data import AreaDataAggregator
 from datetime import datetime
 import math
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=r"C:\Users\AMT22\phyton\paginaweb\templates")
 app.secret_key = 'una_clave_secreta'  # Necesario para usar mensajes flash
 
 # Inicializar variables globales
 db = BaseDeDatos()
 db.initialize()
 
-def cargar_grupos():
+def cargar_categorias():
     """
-    Carga la lista de géneros de interés desde el archivo JSON.
-    Si el JSON tiene una estructura de diccionario, se extrae la lista
-    asumiendo que está bajo la llave "plantas".
+    Carga las categorías (grupos) y sus géneros desde el archivo JSON.
+    Retorna dos estructuras:
+      1. Una lista de nombres de grupos (categorías) para el frontend.
+      2. Un diccionario que mapea cada grupo a una lista de géneros (aplanando las familias).
     """
     with open('grupos_plantas.json', 'r', encoding='utf-8') as f:
         data = json.load(f)
-    if isinstance(data, dict):
-        return data.get("plantas", [])
-    return data
+    
+    categorias = {}
+    nombres_categorias = []
+    
+    # Iterar sobre los grupos definidos en la clave "plant_groups"
+    for grupo in data.get("plant_groups", []):
+        grupo_nombre = grupo.get("grupo", "Sin grupo")
+        nombres_categorias.append(grupo_nombre)
+        generos = []
+        # Recorremos las familias dentro del grupo y acumulamos sus géneros
+        for familia in grupo.get("familias", []):
+            generos.extend(familia.get("generos", []))
+        categorias[grupo_nombre] = generos
+    
+    return nombres_categorias, categorias
 
-GENEROS_INTERES = cargar_grupos()
+# Cargar datos al iniciar la app
+CATEGORIAS_NOMBRES, CATEGORIAS = cargar_categorias()
+
+# Cargar la data completa de grupos (lista de diccionarios) para pasar a la plantilla
+with open('grupos_plantas.json', 'r', encoding='utf-8') as f:
+    GRUPOS_DATA = json.load(f)
 
 # Instancia del agregador para búsqueda por área (bounding box)
-aggregator = AreaDataAggregator(generos_interes=GENEROS_INTERES)
+CATEGORIA_POR_DEFECTO = CATEGORIAS_NOMBRES[0] if CATEGORIAS_NOMBRES else ""
+aggregator = AreaDataAggregator(generos_interes=CATEGORIAS.get(CATEGORIA_POR_DEFECTO, []))
 
 # Función para obtener coordenadas desde una dirección
 def obtener_coordenadas(direccion):
@@ -81,76 +100,121 @@ def obtener_descripcion_wikipedia(nombre_cientifico):
 
 @app.route('/')
 def home():
-    return render_template('index.html', generos=GENEROS_INTERES)
+    # Se pasan las categorías y la data completa de grupos a la plantilla
+    return render_template('index.html', 
+                           categorias=CATEGORIAS_NOMBRES, 
+                           grupos=GRUPOS_DATA)
 
-# Ruta para búsqueda (POST)
+# Modificada la función buscar_direccion para validar correctamente las coordenadas de las plantas
 @app.route('/buscar', methods=['POST'])
 def buscar_direccion():
     try:
         direccion = request.form.get('direccion')
         latitud = request.form.get('latitud')
         longitud = request.form.get('longitud')
-        generos_seleccionados = request.form.getlist('generos')
+        categoria_seleccionada = request.form.get('categoria')
+        genero_seleccionado = request.form.get('genero', None)
+        radio = request.form.get('radio')
+        try:
+            radio = float(radio)
+        except (ValueError, TypeError):
+            radio = 10  # Valor por defecto
         
-        if not generos_seleccionados:
-            flash("Por favor, seleccione al menos un género de interés.", "error")
-            return redirect(url_for('home'))
-
-        # Si se ingresa dirección, se obtienen coordenadas; de lo contrario se usan las ingresadas
-        if direccion:
+        # Depuración: Imprimir valores iniciales
+        print(f"Valores iniciales - Dirección: '{direccion}', Latitud: '{latitud}', Longitud: '{longitud}', Radio: '{radio}'")
+        
+        # Si se proporcionan coordenadas, convertir comas a puntos
+        if latitud and longitud:
+            latitud = float(latitud.replace(',', '.'))
+            longitud = float(longitud.replace(',', '.'))
+            print(f"Coordenadas convertidas: Latitud = {latitud}, Longitud = {longitud}")
+        elif direccion:
             latitud, longitud = obtener_coordenadas(direccion)
+            print(f"Coordenadas obtenidas de dirección: Latitud = {latitud}, Longitud = {longitud}")
             if latitud is None or longitud is None:
                 flash("No se encontraron coordenadas para la dirección proporcionada.", "error")
                 return redirect(url_for('home'))
-        elif not latitud or not longitud:
-            flash("Por favor, ingrese una dirección o latitud y longitud válidas.", "error")
+        else:
+            flash("Por favor, ingrese una dirección o coordenadas válidas.", "error")
+            return redirect(url_for('home'))
+        
+        # Verificar que las coordenadas son números válidos
+        try:
+            latitud = float(latitud)
+            longitud = float(longitud)
+            print(f"Coordenadas finales para búsqueda: Latitud = {latitud}, Longitud = {longitud}")
+        except (ValueError, TypeError) as e:
+            print(f"Error al convertir coordenadas finales: {e}")
+            flash("Error en el formato de las coordenadas. Asegúrese de que sean números válidos.", "error")
             return redirect(url_for('home'))
 
-        latitud, longitud = float(latitud), float(longitud)
+        # Crear el procesador con la categoría y opcionalmente el género
+        procesador = ProcesadorDatos(
+            categoria=categoria_seleccionada,
+            genero=genero_seleccionado
+        )
+        
+        # Procesar la búsqueda con un radio específico
+        df_plantas = procesador.procesar_inaturalist(latitud, longitud, radio=radio)
+        
+        if df_plantas.empty:
+            flash("No se encontraron plantas en la ubicación especificada.", "info")
+            return render_template('resultados.html', 
+                                   plantas=[], 
+                                   latitud=latitud, 
+                                   longitud=longitud,
+                                   categoria_seleccionada=categoria_seleccionada,
+                                   genero_seleccionado=genero_seleccionado)
 
-        # Consultar la API de iNaturalist
-        procesador = ProcesadorDatos(generos_interes=generos_seleccionados)
-        df_plantas = procesador.procesar_inaturalist(latitud, longitud)
-        plantas = df_plantas.to_dict(orient="records")
-
-        if not plantas:
-            flash("No se encontraron plantas válidas en la ubicación especificada.", "info")
-            return render_template('resultados.html', plantas=[], latitud=latitud, longitud=longitud, genero_seleccionado=generos_seleccionados[0])
-
-        # Procesar cada observación: agregar descripción de Wikipedia y otros ajustes
-        for planta in plantas:
-            planta["descripcion_wikipedia"] = obtener_descripcion_wikipedia(planta["nombre_cientifico"])
-            # Si no existe imagen, asignamos un placeholder
-            if "imagen_generica" not in planta or not planta["imagen_generica"]:
-                planta["imagen_generica"] = "https://via.placeholder.com/100?text=No+Image"
+        # Convertir DataFrame a lista de diccionarios
+        plantas = []
+        for _, row in df_plantas.iterrows():
+            coords_str = row.get('coordenadas', '')
+            # Verificar que exista un string válido en 'coordenadas'
+            if not coords_str or not isinstance(coords_str, str):
+                print(f"Registro omitido por falta de coordenadas válidas: {row.get('nombre', 'Sin nombre')}")
+                continue
+            coords = coords_str.split(',')
+            if len(coords) < 2:
+                print(f"Registro omitido por formato incorrecto de coordenadas: {coords_str}")
+                continue
             try:
-                planta["latitud"] = round(float(planta["latitud"]), 3)
-            except:
-                planta["latitud"] = planta["latitud"]
-            try:
-                planta["longitud"] = round(float(planta["longitud"]), 3)
-            except:
-                planta["longitud"] = planta["longitud"]
+                planta_lat = float(coords[0].strip())
+                planta_lon = float(coords[1].strip())
+            except (ValueError, IndexError):
+                print(f"Registro omitido por error en la conversión de coordenadas: {coords_str}")
+                continue
 
-        # Eliminar duplicados
-        plantas_unicas = []
-        vistas = set()
-        for planta in plantas:
-            clave = (planta["nombre_cientifico"], planta["latitud"], planta["longitud"])
-            if clave not in vistas:
-                vistas.add(clave)
-                plantas_unicas.append(planta)
+            # Omitir registros con coordenadas (0,0)
+            if planta_lat == 0.0 and planta_lon == 0.0:
+                print(f"Registro omitido por coordenadas nulas (0,0): {row.get('nombre', 'Sin nombre')}")
+                continue
+
+            planta = {
+                "nombre_cientifico": row['nombre'],
+                "nombre_comun": row.get('nombre_comun', 'N/A'),
+                "distancia": row['distancia'],
+                "fecha_observacion": row['fecha'],
+                "imagen_generica": row['imagen'],
+                "latitud": planta_lat,
+                "longitud": planta_lon,
+                "descripcion_wikipedia": obtener_descripcion_wikipedia(row['nombre'])
+            }
+            plantas.append(planta)
 
         return render_template('resultados.html', 
-                               plantas=plantas_unicas, 
-                               latitud=round(latitud, 3), 
-                               longitud=round(longitud, 3), 
-                               genero_seleccionado=generos_seleccionados[0])
+                               plantas=plantas,
+                               latitud=latitud,
+                               longitud=longitud,
+                               categoria_seleccionada=categoria_seleccionada,
+                               genero_seleccionado=genero_seleccionado)
 
-    except ValueError:
-        flash("Por favor, ingrese valores numéricos válidos para latitud y longitud.", "error")
+    except ValueError as e:
+        print(f"Error de valor: {str(e)}")
+        flash("Error en el formato de las coordenadas. Use punto decimal en lugar de coma.", "error")
         return redirect(url_for('home'))
     except Exception as e:
+        print(f"Error inesperado: {str(e)}")
         flash(f"Ocurrió un error inesperado: {str(e)}", "error")
         return redirect(url_for('home'))
 
@@ -183,8 +247,7 @@ def buscar_area():
     print("Generos obtenidos en las observaciones:")
     for planta in plantas:
         print(planta.get("genero"))
-    print("Generos de interés:")
-    print(GENEROS_INTERES)
+    print("Categorías disponibles:", CATEGORIAS.keys())
     print(f"Observaciones después del filtrado: {len(plantas)}")
 
     for planta in plantas:
